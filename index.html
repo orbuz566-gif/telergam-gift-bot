@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="telegram-web-app" content="true">
+    <title>🎁 Gift Coin Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 16px;
+            overflow-x: hidden;
+        }
+        
+        /* Экраны */
+        .screen {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .screen.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Загрузка */
+        #loadingScreen {
+            text-align: center;
+            padding-top: 50%;
+        }
+        
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #ffffff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Верхняя панель */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+        
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid white;
+            object-fit: cover;
+        }
+        
+        .user-details h3 {
+            font-size: 1.1em;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        
+        .level {
+            font-size: 0.85em;
+            opacity: 0.9;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        
+        /* Коин дисплей */
+        .coins-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(218, 165, 32, 0.3));
+            padding: 8px 14px;
+            border-radius: 15px;
+            border: 2px solid rgba(255, 215, 0, 0.5);
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2);
+        }
+        
+        .coin-icon {
+            font-size: 1.8em;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .coins-info {
+            text-align: center;
+        }
+        
+        .coins-count {
+            font-size: 1.4em;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .coins-per-min {
+            font-size: 0.75em;
+            opacity: 0.9;
+            margin-top: -2px;
+        }
+        
+        /* Навигация */
+        .nav-tabs {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: white;
+            padding: 12px 6px;
+            border-radius: 14px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .tab-btn.active {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Контент */
+        .content-area {
+            min-height: 60vh;
+        }
+        
+        .tab-content {
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        /* Карточки */
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 18px;
+            padding: 18px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card h3 {
+            font-size: 1.1em;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255, 255, 255, 0.95);
+        }
+        
+        /* Статистика */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stat-label {
+            display: block;
+            font-size: 0.75em;
+            opacity: 0.8;
+            margin-bottom: 4px;
+        }
+        
+        .stat-value {
+            display: block;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        /* Кнопки */
+        .action-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 14px;
+            color: white;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .action-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Подарки */
+        .gifts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+        }
+        
+        .gift-item {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .gift-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: scale(1.05);
+        }
+        
+        .gift-item.owned {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .gift-emoji {
+            font-size: 2.5em;
+            margin-bottom: 8px;
+        }
+        
+        .gift-name {
+            font-size: 0.8em;
+            opacity: 0.9;
+        }
+        
+        /* Магазин */
+        .shop-header {
+            margin-bottom: 20px;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            color: white;
+            font-size: 0.8em;
+            cursor: pointer;
+        }
+        
+        .filter-btn.active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+        }
+        
+        .shop-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .shop-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-4px);
+        }
+        
+        .shop-item.owned {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.15);
+        }
+        
+        .shop-item.owned::after {
+            content: "✓";
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #4CAF50;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-size: 0.8em;
+            line-height: 20px;
+        }
+        
+        .gift-price {
+            background: rgba(255, 215, 0, 0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin: 10px 0;
+            display: inline-block;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+        }
+        
+        .buy-btn {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 12px;
+            color: #333;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 8px;
+        }
+        
+        .buy-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Уровни */
+        .levels-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            margin: 16px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700, #FF8C00);
+            border-radius: 6px;
+            width: 5%;
+            transition: width 0.5s ease;
+        }
+        
+        .level-info {
+            font-size: 1.1em;
+            color: #FFD700;
+            font-weight: bold;
+        }
+        
+        .levels-road {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+        }
+        
+        .level-milestone {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .level-milestone.current {
+            border-color: #FFD700;
+            background: rgba(255, 215, 0, 0.1);
+            transform: scale(1.05);
+        }
+        
+        .level-milestone.completed {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .level-number {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .level-reward {
+            font-size: 0.8em;
+            opacity: 0.9;
+            margin-top: 8px;
+        }
+        
+        /* Промокоды */
+        .promo-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .promo-input input {
+            flex: 1;
+            padding: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1em;
+        }
+        
+        .promo-input input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .promo-input button {
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #FF416C, #FF4B2B);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 65, 108, 0.4);
+        }
+        
+        .promo-list, .promo-history {
+            margin-bottom: 24px;
+        }
+        
+        .promo-code {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .promo-code.used {
+            opacity: 0.6;
+        }
+        
+        .promo-reward {
+            background: rgba(255, 215, 0, 0.2);
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+        
+        /* Баннер акций */
+        .promotions-banner {
+            background: linear-gradient(135deg, #FF416C, #FF4B2B);
+            border-radius: 16px;
+            padding: 16px;
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 8px 32px rgba(255, 65, 108, 0.3);
+            animation: glow 2s infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { box-shadow: 0 8px 32px rgba(255, 65, 108, 0.3); }
+            to { box-shadow: 0 8px 32px rgba(255, 65, 108, 0.6); }
+        }
+        
+        .promotions-banner button {
+            background: white;
+            color: #FF416C;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        /* Модальное окно */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 24px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+        
+        .close {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            font-size: 28px;
+            cursor: pointer;
+            color: white;
+            opacity: 0.8;
+        }
+        
+        .modal-btn {
+            width: 100%;
+            padding: 16px;
+            background: white;
+            border: none;
+            border-radius: 14px;
+            color: #667eea;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        /* Анимации */
+        @keyframes coinEarned {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+        
+        .coin-earned {
+            animation: coinEarned 0.5s ease;
+        }
+        
+        /* Уведомления */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            z-index: 9999;
+            animation: slideInRight 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+            max-width: 300px;
+            backdrop-filter: blur(10px);
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateY(-20px); }
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 480px) {
+            body {
+                padding: 12px;
+            }
+            
+            .top-bar {
+                padding: 10px;
+            }
+            
+            .avatar {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .tab-btn {
+                padding: 10px 4px;
+                font-size: 0.75em;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .shop-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .gifts-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .levels-road {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        /* Темная тема для WebApp */
+        @media (prefers-color-scheme: dark) {
+            .modal-content {
+                background: linear-gradient(135deg, #2d3748, #4a5568);
+            }
+        }
+    </style>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <!-- Загрузочный экран -->
+    <div id="loadingScreen" class="screen active">
+        <div class="loader"></div>
+        <p style="text-align: center; margin-top: 20px;">Загрузка игры...</p>
+    </div>
+
+    <!-- Главный экран -->
+    <div id="mainScreen" class="screen">
+        <!-- Верхняя панель -->
+        <div class="top-bar">
+            <div class="user-info">
+                <img id="userAvatar" src="" alt="Avatar" class="avatar">
+                <div class="user-details">
+                    <h3 id="userName">Игрок</h3>
+                    <div class="level">Уровень: <span id="userLevel">1</span></div>
+                </div>
+            </div>
+            <div class="coins-display">
+                <div class="coin-icon">🪙</div>
+                <div class="coins-info">
+                    <div class="coins-count" id="coinsCount">0</div>
+                    <div class="coins-per-min">+<span id="coinsPerMin">1</span>/мин</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Навигация -->
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="showTab('dashboard')">
+                🏠<span>Главная</span>
+            </button>
+            <button class="tab-btn" onclick="showTab('shop')">
+                🛍️<span>Магазин</span>
+            </button>
+            <button class="tab-btn" onclick="showTab('levels')">
+                🏆<span>Уровни</span>
+            </button>
+            <button class="tab-btn" onclick="showTab('promocodes')">
+                🎫<span>Промо</span>
+            </button>
+        </div>
+
+        <!-- Контент -->
+        <div class="content-area">
+            <!-- Дашборд -->
+            <div id="dashboardTab" class="tab-content active">
+                <div class="card">
+                    <h3>📊 Статистика</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">Всего коинов</span>
+                            <span class="stat-value" id="totalCoins">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Подарков</span>
+                            <span class="stat-value" id="giftsBought">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Время игры</span>
+                            <span class="stat-value" id="playTime">0ч</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>⚡ Быстрые действия</h3>
+                    <button class="action-btn" onclick="claimDailyBonus()">
+                        🎁 Забрать ежедневный бонус
+                    </button>
+                    <button class="action-btn" onclick="checkPromoCode()">
+                        🔑 Ввести промокод
+                    </button>
+                </div>
+
+                <div class="card">
+                    <h3>🎁 Ваши подарки</h3>
+                    <div id="userGifts" class="gifts-grid">
+                        <!-- Генерируется скриптом -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Магазин -->
+            <div id="shopTab" class="tab-content">
+                <div class="shop-header">
+                    <h2 style="margin-bottom: 10px;">🛍️ Магазин подарков</h2>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" onclick="filterGifts('all')">Все</button>
+                        <button class="filter-btn" onclick="filterGifts('available')">Доступные</button>
+                        <button class="filter-btn" onclick="filterGifts('owned')">Купленные</button>
+                    </div>
+                </div>
+                <div id="shopItems" class="shop-grid">
+                    <!-- Генерируется скриптом -->
+                </div>
+            </div>
+
+            <!-- Уровни -->
+            <div id="levelsTab" class="tab-content">
+                <div class="levels-header">
+                    <h2>🏆 Дорога уровней</h2>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="levelProgress" style="width: 5%;"></div>
+                    </div>
+                    <div class="level-info">
+                        Уровень <span id="currentLevel">1</span> из 100
+                    </div>
+                </div>
+                <div id="levelsRoad" class="levels-road">
+                    <!-- Генерируется скриптом -->
+                </div>
+            </div>
+
+            <!-- Промокоды -->
+            <div id="promocodesTab" class="tab-content">
+                <div class="promo-input">
+                    <input type="text" id="promoCodeInput" placeholder="Введите промокод...">
+                    <button onclick="activatePromoCode()">Активировать</button>
+                </div>
+                <div class="card">
+                    <h3>🎫 Доступные промокоды</h3>
+                    <div id="availablePromocodes">
+                        <!-- Генерируется скриптом -->
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>📜 История активации</h3>
+                    <div id="promoHistory">
+                        <!-- Генерируется скриптом -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Баннер акций -->
+        <div class="promotions-banner">
+            <span style="font-weight: bold;">🎲 Рандомные акции доступны!</span>
+            <button onclick="openPromotions()">Посмотреть →</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно -->
+    <div id="giftModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h3 id="modalTitle" style="margin-bottom: 20px;"></h3>
+            <div id="modalBody" style="margin-bottom: 20px;"></div>
+            <button id="modalAction" class="modal-btn" onclick="modalActionHandler()"></button>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        
+        // Данные игры
+        let gameData = {
+            coins: 100,
+            totalCoins: 1000,
+            level: 1,
+            xp: 0,
+            xpNeeded: 100,
+            coinsPerMinute: 1,
+            gifts: [],
+            ownedGifts: [],
+            promoCodes: [],
+            usedPromoCodes: [],
+            playTimeHours: 0,
+            lastLogin: Date.now()
+        };
+        
+        // Данные магазина
+        const gifts = [
+            { id: 1, name: "🎈 Воздушный шар", emoji: "🎈", price: 50, coinsPerMin: 0.1, level: 1 },
+            { id: 2, name: "🎁 Коробка", emoji: "🎁", price: 100, coinsPerMin: 0.2, level: 1 },
+            { id: 3, name: "💝 Сердце", emoji: "💝", price: 200, coinsPerMin: 0.5, level: 5 },
+            { id: 4, name: "🎄 Ёлка", emoji: "🎄", price: 500, coinsPerMin: 1, level: 10 },
+            { id: 5, name: "🏆 Кубок", emoji: "🏆", price: 1000, coinsPerMin: 2, level: 20 },
+            { id: 6, name: "👑 Корона", emoji: "👑", price: 5000, coinsPerMin: 5, level: 50 },
+            { id: 7, name: "💎 Алмаз", emoji: "💎", price: 10000, coinsPerMin: 10, level: 70 },
+            { id: 8, name: "🚀 Ракета", emoji: "🚀", price: 50000, coinsPerMin: 20, level: 100 }
+        ];
+        
+        // Промокоды для уровней
+        const levelPromoCodes = {
+            5: { code: "LEVEL5", reward: 500 },
+            10: { code: "LEVEL10", reward: 1000 },
+            20: { code: "LEVEL20", reward: 2000 },
+            30: { code: "LEVEL30", reward: 3000 },
+            50: { code: "LEVEL50", reward: 5000 },
+            70: { code: "LEVEL70", reward: 7000 },
+            100: { code: "LEVEL100", reward: 10000 }
+        };
+        
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            initGame();
+        });
+        
+        function initGame() {
+            // Расширяем WebApp на весь экран
+            tg.expand();
+            
+            // Получаем данные пользователя
+            const user = tg.initDataUnsafe?.user;
+            if (user) {
+                document.getElementById('userName').textContent = user.first_name || 'Игрок';
+                if (user.photo_url) {
+                    document.getElementById('userAvatar').src = user.photo_url;
+                }
+            }
+            
+            // Загружаем сохраненные данные
+            loadGameData();
+            
+            // Обновляем интерфейс
+            updateUI();
+            
+            // Показываем главный экран
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.remove('active');
+                document.getElementById('mainScreen').classList.add('active');
+            }, 1000);
+            
+            // Запускаем авто-сбор коинов
+            setInterval(updateOfflineCoins, 60000); // Каждую минуту
+            
+            // Анимация коинов
+            setInterval(() => {
+                document.querySelector('.coin-icon').classList.add('coin-earned');
+                setTimeout(() => {
+                    document.querySelector('.coin-icon').classList.remove('coin-earned');
+                }, 500);
+            }, 10000);
+        }
+        
+        function loadGameData() {
+            // В реальном приложении здесь загрузка с сервера
+            const saved = localStorage.getItem('giftCoinGame');
+            if (saved) {
+                gameData = JSON.parse(saved);
+            }
+            
+            // Обновляем время игры
+            const now = Date.now();
+            const diff = now - gameData.lastLogin;
+            gameData.playTimeHours += Math.floor(diff / (1000 * 60 * 60));
+            gameData.lastLogin = now;
+        }
+        
+        function saveGameData() {
+            localStorage.setItem('giftCoinGame', JSON.stringify(gameData));
+        }
+        
+        function updateUI() {
+            // Обновляем коины
+            document.getElementById('coinsCount').textContent = gameData.coins.toLocaleString();
+            document.getElementById('totalCoins').textContent = gameData.totalCoins.toLocaleString();
+            
+            // Обновляем уровень и прогресс
+            document.getElementById('userLevel').textContent = gameData.level;
+            document.getElementById('currentLevel').textContent = gameData.level;
+            const progress = (gameData.xp / gameData.xpNeeded) * 100;
+            document.getElementById('levelProgress').style.width = `${Math.min(progress, 100)}%`;
+            
+            // Обновляем статистику
+            document.getElementById('giftsBought').textContent = gameData.ownedGifts.length;
+            document.getElementById('playTime').textContent = `${gameData.playTimeHours}ч`;
+            
+            // Обновляем коины в минуту
+            let totalCoinsPerMin = 1; // Базовые
+            gameData.ownedGifts.forEach(giftId => {
+                const gift = gifts.find(g => g.id === giftId);
+                if (gift) totalCoinsPerMin += gift.coinsPerMin;
+            });
+            gameData.coinsPerMinute = totalCoinsPerMin;
+            document.getElementById('coinsPerMin').textContent = totalCoinsPerMin.toFixed(1);
+            
+            // Обновляем подарки
+            updateGiftsDisplay();
+            
+            // Обновляем магазин
+            updateShopDisplay();
+            
+            // Обновляем уровни
+            updateLevelsDisplay();
+            
+            // Обновляем промокоды
+            updatePromocodesDisplay();
+        }
+        
+        function updateOfflineCoins() {
+            const earned = gameData.coinsPerMinute;
+            gameData.coins += earned;
+            gameData.totalCoins += earned;
+            updateUI();
+            saveGameData();
+            showNotification(`+${earned} 🪙 (офлайн)`);
+        }
+        
+        function updateGiftsDisplay() {
+            const container = document.getElementById('userGifts');
+            container.innerHTML = '';
+            
+            gameData.ownedGifts.forEach(giftId => {
+                const gift = gifts.find(g => g.id === giftId);
+                if (gift) {
+                    const div = document.createElement('div');
+                    div.className = 'gift-item owned';
+                    div.innerHTML = `
+                        <div class="gift-emoji">${gift.emoji}</div>
+                        <div class="gift-name">${gift.name}</div>
+                        <div style="font-size: 0.7em; margin-top: 5px;">+${gift.coinsPerMin}/мин</div>
+                    `;
+                    container.appendChild(div);
+                }
+            });
+        }
+        
+        function updateShopDisplay() {
+            const container = document.getElementById('shopItems');
+            container.innerHTML = '';
+            
+            gifts.forEach(gift => {
+                const isOwned = gameData.ownedGifts.includes(gift.id);
+                const canBuy = gameData.coins >= gift.price && gameData.level >= gift.level;
+                
+                const div = document.createElement('div');
+                div.className = `shop-item ${isOwned ? 'owned' : ''}`;
+                div.innerHTML = `
+                    <div style="font-size: 2.5em; margin-bottom: 10px;">${gift.emoji}</div>
+                    <div style="font-weight: bold; margin-bottom: 8px;">${gift.name}</div>
+                    <div style="font-size: 0.9em; opacity: 0.8; margin-bottom: 10px;">Уровень ${gift.level}</div>
+                    <div class="gift-price">${gift.price.toLocaleString()} 🪙</div>
+                    <div style="font-size: 0.8em; margin: 8px 0; color: #4CAF50;">
+                        +${gift.coinsPerMin} коинов/мин
+                    </div>
+                    <button class="buy-btn" onclick="buyGift(${gift.id})" 
+                        ${isOwned || !canBuy ? 'disabled' : ''}>
+                        ${isOwned ? 'Куплено' : canBuy ? 'Купить' : 'Недоступно'}
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        function updateLevelsDisplay() {
+            const container = document.getElementById('levelsRoad');
+            container.innerHTML = '';
+            
+            const milestones = [1, 5, 10, 20, 30, 50, 70, 100];
+            
+            milestones.forEach(level => {
+                const isCurrent = gameData.level === level;
+                const isCompleted = gameData.level > level;
+                const hasPromo = levelPromoCodes[level];
+                
+                const div = document.createElement('div');
+                div.className = `level-milestone ${isCurrent ? 'current' : ''} ${isCompleted ? 'completed' : ''}`;
+                div.innerHTML = `
+                    <div class="level-number">${level}</div>
+                    <div>${getLevelReward(level)}</div>
+                    ${hasPromo ? `<div class="level-reward">🎫 Промокод</div>` : ''}
+                `;
+                div.onclick = () => showLevelInfo(level);
+                container.appendChild(div);
+            });
+        }
+        
+        function getLevelReward(level) {
+            if (level >= 100) return '🚀 Максимум';
+            if (level >= 70) return '💎 Легенда';
+            if (level >= 50) return '👑 Мастер';
+            if (level >= 30) return '🏆 Эксперт';
+            if (level >= 20) return '⭐ Ветеран';
+            if (level >= 10) return '🔥 Продвинутый';
+            if (level >= 5) return '🎯 Новичок';
+            return '🌟 Начинающий';
+        }
+        
+        function updatePromocodesDisplay() {
+            // Доступные промокоды
+            const availableContainer = document.getElementById('availablePromocodes');
+            availableContainer.innerHTML = '';
+            
+            Object.entries(levelPromoCodes).forEach(([level, promo]) => {
+                if (gameData.level >= parseInt(level) && !gameData.usedPromoCodes.includes(promo.code)) {
+                    const div = document.createElement('div');
+                    div.className = 'promo-code';
+                    div.innerHTML = `
+                        <div>
+                            <strong>${promo.code}</strong>
+                            <div style="font-size: 0.8em; opacity: 0.8;">Уровень ${level}</div>
+                        </div>
+                        <div class="promo-reward">${promo.reward} 🪙</div>
+                    `;
+                    div.onclick = () => activatePromoCode(promo.code);
+                    availableContainer.appendChild(div);
+                }
+            });
+            
+            // История
+            const historyContainer = document.getElementById('promoHistory');
+            historyContainer.innerHTML = gameData.usedPromoCodes.length > 0 
+                ? gameData.usedPromoCodes.map(code => 
+                    `<div class="promo-code used">
+                        <span>${code}</span>
+                        <span style="color: #4CAF50;">✓ Использован</span>
+                    </div>`
+                ).join('')
+                : '<p style="text-align: center; opacity: 0.7;">Нет использованных промокодов</p>';
+        }
+        
+        // Основные функции игры
+        function buyGift(giftId) {
+            const gift = gifts.find(g => g.id === giftId);
+            
+            if (!gift) {
+                showNotification('Подарок не найден!');
+                return;
+            }
+            
+            if (gameData.ownedGifts.includes(giftId)) {
+                showNotification('У вас уже есть этот подарок!');
+                return;
+            }
+            
+            if (gameData.coins < gift.price) {
+                showNotification('Недостаточно коинов!');
+                return;
+            }
+            
+            if (gameData.level < gift.level) {
+                showNotification(`Нужен уровень ${gift.level}!`);
+                return;
+            }
+            
+            // Покупка
+            gameData.coins -= gift.price;
+            gameData.ownedGifts.push(giftId);
+            
+            // Даем опыт за покупку
+            addXP(100);
+            
+            // Обновляем
+            updateUI();
+            saveGameData();
+            
+            // Показываем успех
+            showModal(
+                '🎉 Успешная покупка!',
+                `Вы купили ${gift.emoji} ${gift.name}<br><br>
+                 Теперь вы получаете дополнительно <strong>+${gift.coinsPerMin} коинов/мин</strong>`,
+                'Отлично!',
+                () => closeModal()
+            );
+        }
+        
+        function addXP(amount) {
+            gameData.xp += amount;
+            
+            while (gameData.xp >= gameData.xpNeeded && gameData.level < 100) {
+                gameData.xp -= gameData.xpNeeded;
+                gameData.level++;
+                gameData.xpNeeded = Math.floor(gameData.xpNeeded * 1.5);
+                
+                // Проверяем промокод для уровня
+                if (levelPromoCodes[gameData.level]) {
+                    showModal(
+                        '🎉 Новый уровень!',
+                        `Поздравляем! Вы достигли уровня ${gameData.level}<br><br>
+                         Доступен новый промокод: <strong>${levelPromoCodes[gameData.level].code}</strong><br>
+                         Награда: ${levelPromoCodes[gameData.level].reward} 🪙`,
+                        'Супер!',
+                        () => closeModal()
+                    );
+                }
+            }
+        }
+        
+        function activatePromoCode(code = null) {
+            const inputCode = code || document.getElementById('promoCodeInput').value.trim().toUpperCase();
+            
+            if (!inputCode) {
+                showNotification('Введите промокод!');
+                return;
+            }
+            
+            // Проверяем использован ли уже
+            if (gameData.usedPromoCodes.includes(inputCode)) {
+                showNotification('Этот промокод уже использован!');
+                return;
+            }
+            
+            // Ищем промокод
+            let promo = null;
+            for (const [level, promoData] of Object.entries(levelPromoCodes)) {
+                if (promoData.code === inputCode) {
+                    promo = promoData;
+                    break;
+                }
+            }
+            
+            if (!promo) {
+                // Проверяем случайные акционные промокоды
+                if (inputCode === 'WELCOME100') {
+                    promo = { reward: 100 };
+                } else if (inputCode === 'NEWYEAR2024') {
+                    promo = { reward: 2024 };
+                } else if (inputCode === 'GIFT500') {
+                    promo = { reward: 500 };
+                } else {
+                    showNotification('Неверный промокод!');
+                    return;
+                }
+            }
+            
+            // Активируем промокод
+            gameData.coins += promo.reward;
+            gameData.totalCoins += promo.reward;
+            gameData.usedPromoCodes.push(inputCode);
+            
+            // Очищаем поле ввода
+            document.getElementById('promoCodeInput').value = '';
+            
+            // Обновляем
+            updateUI();
+            saveGameData();
+            
+            // Показываем успех
+            showModal(
+                '🎫 Промокод активирован!',
+                `Вы получили <strong>${promo.reward} коинов</strong><br><br>
+                 Текущий баланс: ${gameData.coins.toLocaleString()} 🪙`,
+                'Отлично!',
+                () => closeModal()
+            );
+        }
+        
+        function claimDailyBonus() {
+            const lastClaim = localStorage.getItem('lastDailyClaim');
+            const today = new Date().toDateString();
+            
+            if (lastClaim === today) {
+                showNotification('Вы уже получали бонус сегодня!');
+                return;
+            }
+            
+            const bonus = 100 * gameData.level;
+            gameData.coins += bonus;
+            gameData.totalCoins += bonus;
+            
+            localStorage.setItem('lastDailyClaim', today);
+            updateUI();
+            saveGameData();
+            
+            showModal(
+                '🎁 Ежедневный бонус!',
+                `Вы получили <strong>${bonus} коинов</strong><br><br>
+                 Заходите каждый день за бонусами!`,
+                'Ура!',
+                () => closeModal()
+            );
+        }
+        
+        function openPromotions() {
+            tg.openTelegramLink('https://t.me/dekabrss');
+        }
+        
+        function checkPromoCode() {
+            showTab('promocodes');
+            document.getElementById('promoCodeInput').focus();
+        }
+        
+        // Утилиты интерфейса
+        function showTab(tabName) {
+            // Скрываем все табы
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Деактивируем все кнопки
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Показываем выбранный таб
+            document.getElementById(`${tabName}Tab`).classList.add('active');
+            
+            // Активируем кнопку
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if (btn.textContent.includes(getTabName(tabName))) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+        
+        function getTabName(tab) {
+            const names = {
+                dashboard: 'Главная',
+                shop: 'Магазин',
+                levels: 'Уровни',
+                promocodes: 'Промо'
+            };
+            return names[tab];
+        }
+        
+        function showLevelInfo(level) {
+            const reward = levelPromoCodes[level];
+            showModal(
+                `Уровень ${level}`,
+                `Достижение: ${getLevelReward(level)}<br><br>
+                 ${reward ? `Промокод: <strong>${reward.code}</strong><br>
+                 Награда: ${reward.reward} 🪙` : 'Особых наград нет'}<br><br>
+                 ${gameData.level >= level ? '✓ Вы достигли этого уровня' : '❌ Еще не достигнут'}`,
+                gameData.level >= level ? 'Отлично!' : 'Продолжайте в том же духе!',
+                () => closeModal()
+            );
+        }
+        
+        function filterGifts(filter) {
+            const items = document.querySelectorAll('.shop-item');
+            items.forEach(item => {
+                const isOwned = item.classList.contains('owned');
+                let show = true;
+                
+                switch(filter) {
+                    case 'available':
+                        show = !isOwned;
+                        break;
+                    case 'owned':
+                        show = isOwned;
+                        break;
+                }
+                
+                item.style.display = show ? 'block' : 'none';
+            });
+            
+            // Обновляем активную кнопку фильтра
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+        
+        function showModal(title, body, actionText, actionHandler) {
+            document.getElementById('modalTitle').innerHTML = title;
+            document.getElementById('modalBody').innerHTML = body;
+            document.getElementById('modalAction').textContent = actionText;
+            window.modalActionHandler = actionHandler;
+            document.getElementById('giftModal').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('giftModal').classList.remove('active');
+        }
+        
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.innerHTML = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+        
+        // Вибрация для мобильных устройств
+        function vibrate() {
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+        
+        // Перед закрытием страницы
+        window.addEventListener('beforeunload', () => {
+            saveGameData();
+        });
+    </script>
+</body>
+</html>
